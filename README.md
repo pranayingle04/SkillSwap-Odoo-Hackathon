@@ -1,3 +1,15 @@
+## Problem Statement  
+**Develop a Skill Swap Platform — a mini application that enables users to list their skills and request others in return**
+
+## Team Name  
+**Laksha (Team 1852)**
+
+## Team Email  
+**pranaygingle@gmail.com,majumdardebdutta@gmail.com,bhoirpranay24@gmail.com,dadialanavjotsingh@gmail.com**
+
+---
+
+
 # SkillSwap Platform
 
 A full-stack skill-sharing platform where users can exchange skills with each other.
