@@ -17,8 +17,8 @@ router.use(protect);
 router.post('/', createSwap);
 router.get('/', getUserSwaps);
 router.get('/updates', pollUpdates);
-router.patch('/:id/accept', acceptSwap);
-router.patch('/:id/reject', rejectSwap);
+router.put('/:id/accept', acceptSwap);
+router.put('/:id/reject', rejectSwap);
 router.post('/:id/feedback', protect, submitFeedback);
 router.delete('/:id', deleteSwap);
 

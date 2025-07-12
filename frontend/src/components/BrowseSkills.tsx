@@ -6,9 +6,10 @@ interface BrowseSkillsProps {
   users: UserType[];
   currentUser: UserType;
   onSendSwapRequest: (toUserId: string, skillOffered: string, skillWanted: string, message: string) => void;
+  onSearchUsers: (skill: string) => void;
 }
 
-export function BrowseSkills({ users, currentUser, onSendSwapRequest }: BrowseSkillsProps) {
+export function BrowseSkills({ users, currentUser, onSendSwapRequest, onSearchUsers }: BrowseSkillsProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
   const [swapModalData, setSwapModalData] = useState<{
@@ -47,6 +48,18 @@ export function BrowseSkills({ users, currentUser, onSendSwapRequest }: BrowseSk
     }
   };
 
+  const handleSearch = () => {
+    if (searchTerm.trim()) {
+      onSearchUsers(searchTerm.trim());
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
   const openSwapModal = (user: UserType, skill: string) => {
     setSwapModalData({ toUser: user, skillWanted: skill });
   };
@@ -64,8 +77,15 @@ export function BrowseSkills({ users, currentUser, onSendSwapRequest }: BrowseSk
             placeholder="Search by skill, name, or location..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            onKeyPress={handleKeyPress}
+            className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
+          <button
+            onClick={handleSearch}
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 transition-colors"
+          >
+            Search
+          </button>
         </div>
       </div>
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { AuthUser, User } from '../types';
+import { AuthUser } from '../types';
+import { api } from '../services/api';
 
 export function useAuth() {
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
@@ -8,13 +9,16 @@ export function useAuth() {
   useEffect(() => {
     // Check for existing session
     const savedAuth = localStorage.getItem('skillswap-auth');
-    if (savedAuth) {
+    const token = localStorage.getItem('token');
+    
+    if (savedAuth && token) {
       try {
         const parsedAuth = JSON.parse(savedAuth);
         setAuthUser(parsedAuth);
       } catch (error) {
         console.error('Error parsing saved auth:', error);
         localStorage.removeItem('skillswap-auth');
+        localStorage.removeItem('token');
       }
     }
     setIsLoading(false);
@@ -23,60 +27,55 @@ export function useAuth() {
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     setIsLoading(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // For demo purposes, accept any email/password combination
-    // In a real app, this would validate against a backend
-    if (email && password) {
+    try {
+      const data = await api.auth.login(email, password);
+      
       const user: AuthUser = {
-        id: Date.now().toString(),
-        email,
-        name: email.split('@')[0], // Use email prefix as default name
+        id: data.user._id,
+        email: data.user.email,
+        name: data.user.name,
         isAuthenticated: true
       };
       
       setAuthUser(user);
       localStorage.setItem('skillswap-auth', JSON.stringify(user));
+      localStorage.setItem('token', data.token);
       setIsLoading(false);
       return { success: true };
+    } catch (error) {
+      setIsLoading(false);
+      return { success: false, error: error instanceof Error ? error.message : 'Login failed' };
     }
-    
-    setIsLoading(false);
-    return { success: false, error: 'Invalid email or password' };
   };
 
   const register = async (email: string, password: string, name: string): Promise<{ success: boolean; error?: string }> => {
     setIsLoading(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // For demo purposes, accept any valid input
-    if (email && password && name) {
+    try {
+      const data = await api.auth.register({ name, email, password });
+      
       const user: AuthUser = {
-        id: Date.now().toString(),
-        email,
-        name,
+        id: data.user._id,
+        email: data.user.email,
+        name: data.user.name,
         isAuthenticated: true
       };
       
       setAuthUser(user);
       localStorage.setItem('skillswap-auth', JSON.stringify(user));
+      localStorage.setItem('token', data.token);
       setIsLoading(false);
       return { success: true };
+    } catch (error) {
+      setIsLoading(false);
+      return { success: false, error: error instanceof Error ? error.message : 'Registration failed' };
     }
-    
-    setIsLoading(false);
-    return { success: false, error: 'Please fill in all fields' };
   };
 
   const logout = () => {
     setAuthUser(null);
     localStorage.removeItem('skillswap-auth');
-    localStorage.removeItem('skillswap-users');
-    localStorage.removeItem('skillswap-requests');
-    localStorage.removeItem('skillswap-ratings');
+    localStorage.removeItem('token');
   };
 
   return {

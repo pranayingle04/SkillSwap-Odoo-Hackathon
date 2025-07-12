@@ -9,33 +9,68 @@ import { BrowseSkills } from './components/BrowseSkills';
 import { SwapRequests } from './components/SwapRequests';
 import { Ratings } from './components/Ratings';
 import { useAuth } from './hooks/useAuth';
-import { useLocalStorage } from './hooks/useLocalStorage';
-import { mockUsers, mockSwapRequests, mockRatings } from './data/mockData';
+import { useUsers } from './hooks/useUsers';
+import { useSwaps } from './hooks/useSwaps';
 import { User, SwapRequest, Rating } from './types';
+import { api } from './services/api';
 
 function App() {
   const { authUser, isLoading: authLoading, login, register, logout, isAuthenticated } = useAuth();
+  const { users, searchUsersBySkill, updateUserProfile } = useUsers();
+  const { swapRequests, loadUserSwaps, createSwapRequest, acceptSwap, rejectSwap, deleteSwap, submitFeedback } = useSwaps();
+  
   const [showHomePage, setShowHomePage] = useState(true);
   const [authView, setAuthView] = useState<'login' | 'register'>('login');
   const [authError, setAuthError] = useState<string>('');
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [currentView, setCurrentView] = useState('browse');
-  const [users, setUsers] = useLocalStorage<User[]>('skillswap-users', mockUsers);
-  const [swapRequests, setSwapRequests] = useLocalStorage<SwapRequest[]>('skillswap-requests', mockSwapRequests);
-  const [ratings, setRatings] = useLocalStorage<Rating[]>('skillswap-ratings', mockRatings);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isProfileComplete, setIsProfileComplete] = useState(false);
 
-  const currentUser = authUser ? users.find(user => user.email === authUser.email) : null;
-
+  // Load user profile when authenticated
   useEffect(() => {
-    if (authUser && !currentUser) {
-      // Check if user profile exists, if not, they need to complete setup
-      const existingUser = users.find(user => user.email === authUser.email);
-      if (!existingUser) {
-        // User needs to complete profile setup
-        return;
-      }
+    if (authUser && isAuthenticated) {
+      loadUserProfile();
     }
-  }, [authUser, currentUser, users]);
+  }, [authUser, isAuthenticated]);
+
+  // Load swaps when user is authenticated
+  useEffect(() => {
+    if (authUser && isAuthenticated) {
+      loadUserSwaps();
+    }
+  }, [authUser, isAuthenticated]);
+
+  const loadUserProfile = async () => {
+    try {
+      const profile = await api.users.getProfile();
+      
+      const user: User = {
+        id: profile._id,
+        name: profile.name,
+        email: profile.email,
+        location: profile.location,
+        profilePhoto: profile.profilePhoto,
+        skillsOffered: profile.skillsOffered || [],
+        skillsWanted: profile.skillsWanted || [],
+        availability: profile.availability ? 
+          Object.entries(profile.availability)
+            .filter(([_, value]) => value === true)
+            .map(([key]) => key) : [],
+        isPublic: profile.isPublic,
+        rating: 5.0,
+        totalRatings: 0,
+        joinedDate: profile.createdAt,
+        isProfileComplete: true
+      };
+      
+      setCurrentUser(user);
+      setIsProfileComplete(true);
+    } catch (error) {
+      // User profile not complete, needs setup
+      setIsProfileComplete(false);
+    }
+  };
 
   const handleLogin = async (email: string, password: string) => {
     setIsAuthLoading(true);
@@ -59,7 +94,7 @@ function App() {
     setIsAuthLoading(false);
   };
 
-  const handleCompleteProfile = (profileData: {
+  const handleCompleteProfile = async (profileData: {
     name: string;
     location?: string;
     skillsOffered: string[];
@@ -67,105 +102,100 @@ function App() {
     availability: string[];
     isPublic: boolean;
   }) => {
-    if (!authUser) return;
+    try {
+      // Convert availability array to backend format
+      const availability = {
+        weekends: profileData.availability.includes('Weekends'),
+        evenings: profileData.availability.includes('Evenings'),
+        custom: profileData.availability.find(a => !['Weekends', 'Evenings'].includes(a)) || ''
+      };
 
-    const newUser: User = {
-      id: authUser.id,
-      email: authUser.email,
-      name: profileData.name,
-      location: profileData.location,
-      skillsOffered: profileData.skillsOffered,
-      skillsWanted: profileData.skillsWanted,
-      availability: profileData.availability,
-      isPublic: profileData.isPublic,
-      rating: 5.0,
-      totalRatings: 0,
-      joinedDate: new Date().toISOString(),
-      isProfileComplete: true
-    };
+      await updateUserProfile({
+        name: profileData.name,
+        location: profileData.location,
+        skillsOffered: profileData.skillsOffered,
+        skillsWanted: profileData.skillsWanted,
+        availability,
+        isPublic: profileData.isPublic
+      });
 
-    setUsers([...users, newUser]);
-  };
-  const handleUpdateUser = (updatedUser: User) => {
-    setUsers(users.map(user => user.id === updatedUser.id ? updatedUser : user));
-  };
-
-  const handleSendSwapRequest = (toUserId: string, skillOffered: string, skillWanted: string, message: string) => {
-    if (!authUser) return;
-    
-    const newRequest: SwapRequest = {
-      id: Date.now().toString(),
-      fromUserId: authUser.id,
-      toUserId,
-      skillOffered,
-      skillWanted,
-      status: 'pending',
-      message,
-      createdAt: new Date().toISOString()
-    };
-    setSwapRequests([...swapRequests, newRequest]);
+      // Reload user profile
+      await loadUserProfile();
+    } catch (error) {
+      console.error('Failed to complete profile:', error);
+    }
   };
 
-  const handleAcceptRequest = (requestId: string) => {
-    setSwapRequests(requests =>
-      requests.map(req =>
-        req.id === requestId
-          ? { ...req, status: 'accepted' as const, completedAt: new Date().toISOString() }
-          : req
-      )
-    );
+  const handleUpdateUser = async (updatedUser: User) => {
+    try {
+      const availability = {
+        weekends: updatedUser.availability.includes('Weekends'),
+        evenings: updatedUser.availability.includes('Evenings'),
+        custom: updatedUser.availability.find(a => !['Weekends', 'Evenings'].includes(a)) || ''
+      };
+
+      await updateUserProfile({
+        name: updatedUser.name,
+        location: updatedUser.location,
+        profilePhoto: updatedUser.profilePhoto,
+        skillsOffered: updatedUser.skillsOffered,
+        skillsWanted: updatedUser.skillsWanted,
+        availability,
+        isPublic: updatedUser.isPublic
+      });
+
+      setCurrentUser(updatedUser);
+    } catch (error) {
+      console.error('Failed to update user:', error);
+    }
   };
 
-  const handleRejectRequest = (requestId: string) => {
-    setSwapRequests(requests =>
-      requests.map(req =>
-        req.id === requestId ? { ...req, status: 'rejected' as const } : req
-      )
-    );
+  const handleSendSwapRequest = async (toUserId: string, skillOffered: string, skillWanted: string, message: string) => {
+    try {
+      await createSwapRequest(toUserId, skillOffered, skillWanted);
+    } catch (error) {
+      console.error('Failed to send swap request:', error);
+    }
   };
 
-  const handleDeleteRequest = (requestId: string) => {
-    setSwapRequests(requests => requests.filter(req => req.id !== requestId));
+  const handleAcceptRequest = async (requestId: string) => {
+    try {
+      await acceptSwap(requestId);
+    } catch (error) {
+      console.error('Failed to accept request:', error);
+    }
   };
 
-  const handleEndSession = (requestId: string) => {
-    setSwapRequests(requests =>
-      requests.map(req =>
-        req.id === requestId
-          ? { ...req, status: 'completed' as const, completedAt: new Date().toISOString() }
-          : req
-      )
-    );
+  const handleRejectRequest = async (requestId: string) => {
+    try {
+      await rejectSwap(requestId);
+    } catch (error) {
+      console.error('Failed to reject request:', error);
+    }
   };
 
-  const handleSubmitRating = (swapRequestId: string, rating: number, feedback: string) => {
-    if (!authUser) return;
-    
-    const swapRequest = swapRequests.find(req => req.id === swapRequestId);
-    if (!swapRequest) return;
+  const handleDeleteRequest = async (requestId: string) => {
+    try {
+      await deleteSwap(requestId);
+    } catch (error) {
+      console.error('Failed to delete request:', error);
+    }
+  };
 
-    const newRating: Rating = {
-      id: Date.now().toString(),
-      swapRequestId,
-      fromUserId: authUser.id,
-      toUserId: swapRequest.fromUserId === authUser.id ? swapRequest.toUserId : swapRequest.fromUserId,
-      rating,
-      feedback,
-      createdAt: new Date().toISOString()
-    };
+  const handleSubmitRating = async (swapRequestId: string, rating: number, feedback: string) => {
+    try {
+      await submitFeedback(swapRequestId, rating, feedback);
+    } catch (error) {
+      console.error('Failed to submit rating:', error);
+    }
+  };
 
-    setRatings([...ratings, newRating]);
-
-    // Update the rated user's average rating
-    const ratedUserId = newRating.toUserId;
-    const userRatings = [...ratings, newRating].filter(r => r.toUserId === ratedUserId);
-    const avgRating = userRatings.reduce((sum, r) => sum + r.rating, 0) / userRatings.length;
-
-    setUsers(users.map(user =>
-      user.id === ratedUserId
-        ? { ...user, rating: avgRating, totalRatings: userRatings.length }
-        : user
-    ));
+  const handleSearchUsers = async (skill: string) => {
+    try {
+      await searchUsersBySkill(skill);
+    } catch (error) {
+      console.error('Failed to search users:', error);
+    }
   };
 
   // Show loading screen while checking authentication
@@ -218,78 +248,57 @@ function App() {
     }
   }
 
-  // Show profile setup if user hasn't completed their profile
-  if (authUser && !currentUser) {
+  // Show profile setup if user is authenticated but profile is not complete
+  if (isAuthenticated && !isProfileComplete) {
     return (
       <ProfileSetup
-        user={{
-          id: authUser.id,
-          email: authUser.email,
-          name: authUser.name || 'User'
-        }}
+        user={authUser!}
         onCompleteProfile={handleCompleteProfile}
       />
     );
   }
 
-  // Show main app if user is authenticated and has completed profile
-  if (!currentUser) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Loading SkillSwap...</h2>
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-        </div>
-      </div>
-    );
-  }
-
+  // Main app interface
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header 
-        currentView={currentView} 
+      <Header
+        currentView={currentView}
         onViewChange={setCurrentView}
         currentUser={currentUser}
         onLogout={logout}
       />
-      
-      <main className="py-8">
+
+      <main className="py-6">
         {currentView === 'browse' && (
           <BrowseSkills
             users={users}
-            currentUser={currentUser}
+            currentUser={currentUser!}
             onSendSwapRequest={handleSendSwapRequest}
+            onSearchUsers={handleSearchUsers}
           />
         )}
-        
-        {currentView === 'profile' && (
+
+        {currentView === 'profile' && currentUser && (
           <UserProfile
             user={currentUser}
             onUpdateUser={handleUpdateUser}
-            isOwnProfile={true}
-            ratings={ratings}
-            swapRequests={swapRequests}
           />
         )}
-        
+
         {currentView === 'requests' && (
           <SwapRequests
             swapRequests={swapRequests}
-            users={users}
-            currentUser={currentUser}
+            currentUser={currentUser!}
             onAcceptRequest={handleAcceptRequest}
             onRejectRequest={handleRejectRequest}
             onDeleteRequest={handleDeleteRequest}
-            onEndSession={handleEndSession}
           />
         )}
-        
+
         {currentView === 'ratings' && (
           <Ratings
             swapRequests={swapRequests}
-            ratings={ratings}
-            users={users}
-            currentUser={currentUser}
+            currentUser={currentUser!}
             onSubmitRating={handleSubmitRating}
           />
         )}
