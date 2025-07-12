@@ -75,20 +75,20 @@ export function HomePage({ onGetStarted }: HomePageProps) {
           </div>
 
           <h1 className="text-6xl md:text-8xl font-bold text-gray-900 mb-6 leading-tight">
-            Learn
+            Learn Anything
+            Teach Everything
+          <br />
             <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-teal-600 bg-clip-text text-transparent">
-              {' '}Anything
-            </span>
-            <br />
-            Teach
-            <span className="bg-gradient-to-r from-orange-500 via-pink-500 to-red-500 bg-clip-text text-transparent">
-              {' '}Everything
+              {' '}Collaborate to Build Your Vision
             </span>
           </h1>
 
           <p className="text-2xl md:text-3xl text-gray-600 mb-8 max-w-4xl mx-auto leading-relaxed">
-            The world's most engaging skill-sharing platform. Connect with passionate learners and expert teachers.
-            <span className="text-blue-600 font-semibold"> Exchange knowledge, build friendships, grow together.</span>
+            Welcome to community driven skill-sharing platform.
+            <br />
+            Connect with passionate learners to exchange knowledge and mentor bright minds.
+            <br />
+            <span className="text-blue-600 font-semibold"> Collaborate with like minded people to Build and Share your Vision.</span>
           </p>
 
           <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-16">
