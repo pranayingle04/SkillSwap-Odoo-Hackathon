@@ -14,6 +14,8 @@ interface ProfileSetupProps {
     skillsWanted: string[];
     availability: string[];
     isPublic: boolean;
+    openTo: string[];
+    openToDescription?: string;
   }) => void;
 }
 
@@ -25,7 +27,9 @@ export function ProfileSetup({ user, onCompleteProfile }: ProfileSetupProps) {
     skillsOffered: [] as string[],
     skillsWanted: [] as string[],
     availability: [] as string[],
-    isPublic: true
+    isPublic: true,
+    openTo: [] as string[],
+    openToDescription: ''
   });
 
   const [newSkill, setNewSkill] = useState('');
@@ -83,6 +87,18 @@ export function ProfileSetup({ user, onCompleteProfile }: ProfileSetupProps) {
     });
   };
 
+  const toggleOpenTo = (option: string) => {
+    setProfileData((prev) => {
+      const alreadySelected = prev.openTo.includes(option);
+      return {
+        ...prev,
+        openTo: alreadySelected
+          ? prev.openTo.filter((item) => item !== option)
+          : [...prev.openTo, option],
+      };
+    });
+  };
+
   const handleNext = () => {
     if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
@@ -106,7 +122,6 @@ export function ProfileSetup({ user, onCompleteProfile }: ProfileSetupProps) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-teal-50 flex items-center justify-center p-4">
       <div className="max-w-2xl w-full">
-        {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Complete Your Profile</h1>
           <p className="text-gray-600">Let's set up your SkillSwap profile to get started</p>
@@ -119,16 +134,15 @@ export function ProfileSetup({ user, onCompleteProfile }: ProfileSetupProps) {
             <span className="text-sm text-gray-500">{Math.round((currentStep / 3) * 100)}% Complete</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
-            <div 
+            <div
               className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${(currentStep / 3) * 100}%` }}
+              style={{ width: ${(currentStep / 3) * 100}% }}
             ></div>
           </div>
         </div>
 
         {/* Form Card */}
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
-          {/* Step 1: Basic Info */}
           {currentStep === 1 && (
             <div className="space-y-6">
               <div className="text-center mb-6">
@@ -136,7 +150,6 @@ export function ProfileSetup({ user, onCompleteProfile }: ProfileSetupProps) {
                 <p className="text-gray-600">Tell us about yourself</p>
               </div>
 
-              {/* Profile Photo */}
               <div className="flex justify-center mb-6">
                 <div className="relative">
                   <div className="h-24 w-24 rounded-full bg-gray-200 flex items-center justify-center">
@@ -148,11 +161,8 @@ export function ProfileSetup({ user, onCompleteProfile }: ProfileSetupProps) {
                 </div>
               </div>
 
-              {/* Name */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Full Name *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
                 <input
                   type="text"
                   value={profileData.name}
@@ -162,11 +172,8 @@ export function ProfileSetup({ user, onCompleteProfile }: ProfileSetupProps) {
                 />
               </div>
 
-              {/* Location */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Location (Optional)
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Location (Optional)</label>
                 <div className="relative">
                   <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <input
@@ -181,15 +188,13 @@ export function ProfileSetup({ user, onCompleteProfile }: ProfileSetupProps) {
             </div>
           )}
 
-          {/* Step 2: Skills Offered */}
           {currentStep === 2 && (
             <div className="space-y-6">
               <div className="text-center mb-6">
-                <h2 className="text-2xl font-semibold text-gray-900 mb-2">Skills You Can Teach</h2>
+                <h2 className="text-2xl font-semibold text-gray-900 mb-2">Skills Offered</h2>
                 <p className="text-gray-600">What skills can you share with others?</p>
               </div>
 
-              {/* Add Skill Input */}
               <div className="flex space-x-2">
                 <input
                   type="text"
@@ -208,7 +213,6 @@ export function ProfileSetup({ user, onCompleteProfile }: ProfileSetupProps) {
                 </button>
               </div>
 
-              {/* Skills List */}
               <div className="space-y-3">
                 {profileData.skillsOffered.map((skill, index) => (
                   <div key={index} className="flex items-center justify-between bg-blue-50 px-4 py-3 rounded-lg">
@@ -231,7 +235,6 @@ export function ProfileSetup({ user, onCompleteProfile }: ProfileSetupProps) {
             </div>
           )}
 
-          {/* Step 3: Skills Wanted & Availability */}
           {currentStep === 3 && (
             <div className="space-y-8">
               <div className="text-center mb-6">
@@ -241,7 +244,7 @@ export function ProfileSetup({ user, onCompleteProfile }: ProfileSetupProps) {
 
               {/* Skills Wanted */}
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Skills You Want to Learn</h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Skills Wanted</h3>
                 <div className="flex space-x-2 mb-4">
                   <input
                     type="text"
@@ -259,7 +262,6 @@ export function ProfileSetup({ user, onCompleteProfile }: ProfileSetupProps) {
                     <span>Add</span>
                   </button>
                 </div>
-
                 <div className="space-y-2">
                   {profileData.skillsWanted.map((skill, index) => (
                     <div key={index} className="flex items-center justify-between bg-orange-50 px-4 py-2 rounded-lg">
@@ -298,7 +300,6 @@ export function ProfileSetup({ user, onCompleteProfile }: ProfileSetupProps) {
                     <span>Add</span>
                   </button>
                 </div>
-
                 <div className="space-y-2">
                   {profileData.availability.map((time, index) => (
                     <div key={index} className="flex items-center justify-between bg-teal-50 px-4 py-2 rounded-lg">
@@ -314,7 +315,39 @@ export function ProfileSetup({ user, onCompleteProfile }: ProfileSetupProps) {
                 </div>
               </div>
 
-              {/* Privacy Setting */}
+              {/* Open To */}
+              <div className="space-y-4 mt-6">
+                <h3 className="text-lg font-medium text-gray-900">Open To</h3>
+                <div className="flex flex-wrap gap-4">
+                  {['Collaboration', 'Mentorship', 'Learning'].map((option) => (
+                    <label key={option} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={profileData.openTo.includes(option)}
+                        onChange={() => toggleOpenTo(option)}
+                        className="form-checkbox text-blue-600"
+                      />
+                      <span className="text-gray-700">{option}</span>
+                    </label>
+                  ))}
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mt-4 mb-2">
+                    Description (optional)
+                  </label>
+                  <textarea
+                    value={profileData.openToDescription}
+                    onChange={(e) => setProfileData({ ...profileData, openToDescription: e.target.value })}
+                    rows={3}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Tell us more about how you're open to collaborate or learn..."
+                  />
+                </div>
+              </div>
+
+              {/* Visibility */}
               <div className="bg-gray-50 rounded-lg p-4">
                 <div className="flex items-center justify-between">
                   <div>
@@ -352,8 +385,7 @@ export function ProfileSetup({ user, onCompleteProfile }: ProfileSetupProps) {
               <button
                 onClick={handleNext}
                 disabled={
-                  (currentStep === 1 && !isStep1Valid) ||
-                  (currentStep === 2 && !isStep2Valid)
+                  (currentStep === 1 && !isStep1Valid) || (currentStep === 2 && !isStep2Valid)
                 }
                 className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
               >
